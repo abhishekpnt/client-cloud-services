@@ -28,10 +28,10 @@ export function init(config) {
       return new AWSStorageService.AWSStorageService(config)
       break;
     case 'gcloud':
-      return new GCPStorageService.GCPStorageService((config))
+      return new GCPStorageService.GCPStorageService(config)
       break;
     case 'oci':
-      return new OCIStorageService.OCIStorageService((config))
+      return new OCIStorageService.OCIStorageService(config)
       break;
     default:
       throw new Error(`Client Cloud Service - ${config.provider} provider is not supported`);
