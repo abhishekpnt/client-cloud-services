@@ -2,7 +2,7 @@
 /**
  * @file        - Entry file referencing Storage Service
  * @description - Entry file referencing Storage Service
- * @exports     - `AzureStorageService`, `AWSStorageService`,'GCPStorageService` and `GCPStorageService`
+ * @exports     - `AzureStorageService`, `AWSStorageService`,'GCPStorageService` and `OCIStorageService`
  * @author      - RAJESH KUMARAVEL
  * @since       - 5.0.3
  * @version     - 2.0.0

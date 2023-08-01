@@ -1,3 +1,5 @@
+### 3.0.0
+- CSP Generalization changes
 ### 2.0.5
 - Added additional loggers for GCP getFileAsText
 ### 2.0.0
