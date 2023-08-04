@@ -37,6 +37,7 @@
     "@project-sunbird/logger": "^0.0.9",
     "async": "2.5.0",
     "azure-storage": "2.10.2",
+    "@azure/storage-blob":"12.15.0",
     "dateformat": "2.0.0",
     "lodash": "4.17.15",
     "multiparty": "^4.2.1",

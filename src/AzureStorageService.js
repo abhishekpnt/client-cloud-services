@@ -2,18 +2,23 @@
  * @file        - Azure Storage Service
  * @exports     - `AzureStorageService`
  * @since       - 5.0.1
- * @version     - 1.0.0
+ * @version     - 2.0.0
  * @implements  - BaseStorageService
+ *
+ * @see {@link https://learn.microsoft.com/en-us/javascript/api/@azure/storage-blob/?view=azure-node-latest | Azure Blob Documentation}
+ * @see {@link https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/storage/storage-blob/MigrationGuide.md#uploading-a-blob-to-the-container | Azure Migration Guide}
  */
 
-const BaseStorageService  = require('./BaseStorageService');
-const azure               = require('azure-storage');
-const { logger }          = require('@project-sunbird/logger');
-const async               = require('async');
-const _                   = require('lodash');
-const dateFormat          = require('dateformat');
-const uuidv1              = require('uuid/v1');
-const multiparty          = require('multiparty');
+const BaseStorageService = require('./BaseStorageService');
+const azure = require('azure-storage');
+const { logger } = require('@project-sunbird/logger');
+const async = require('async');
+const _ = require('lodash');
+const dateFormat = require('dateformat');
+const uuidv1 = require('uuid/v1');
+const multiparty = require('multiparty');
+const { TextDecoder } = require("util");
+const { BlobServiceClient, StorageSharedKeyCredential, generateBlobSASQueryParameters } = require("@azure/storage-blob");
 
 export class AzureStorageService extends BaseStorageService {
 
@@ -23,19 +28,28 @@ export class AzureStorageService extends BaseStorageService {
       throw new Error('Azure__StorageService :: Required configuration is missing');
     }
     this.reportsContainer = _.get(config, 'reportsContainer')?.toString();
-    this.blobService = azure.createBlobService(config?.identity, config?.credential);
+    this.sharedKeyCredential = new StorageSharedKeyCredential(config?.identity, config?.credential);
+    this.blobService = new BlobServiceClient(
+      `https://${config?.identity}.blob.core.windows.net`,
+      this.sharedKeyCredential
+    );
   }
 
-  fileExists(container, fileToGet, callback) {
+  async fileExists(container, fileToGet, callback) {
     if (!container || !fileToGet || !callback) throw new Error('Invalid arguments');
     logger.info({ msg: 'Azure__StorageService - fileExists called for container ' + container + ' for file ' + fileToGet });
-    this.blobService.doesBlobExist(container, fileToGet, (err, response) => {
-      if (err) {
-        callback(err);
-      } else {
-        callback(null, response)
+    const blobClient = this.blobService.getContainerClient(container).getBlobClient(fileToGet);
+    try {
+      const blobProperties = await blobClient.getProperties()
+      if (blobProperties) {
+        const response = {
+          exists: true
+        }
+        callback(null, response);
       }
-    });
+    } catch (error) {
+      callback(error);
+    }
   }
   /**
    * @description                                                     - Retrieves a shared access signature token
@@ -46,32 +60,44 @@ export class AzureStorageService extends BaseStorageService {
    * @return { string }                                               - The shared access signature
    */
   generateSharedAccessSignature(container, blob, sharedAccessPolicy, headers) {
-    return this.blobService.generateSharedAccessSignature(container, blob, sharedAccessPolicy, headers);
+    const sasToken = generateBlobSASQueryParameters(
+      {
+        containerName: container,
+        blobName: blob,
+        ...sharedAccessPolicy.AccessPolicy,
+        ...headers
+      },
+      this.sharedKeyCredential
+    ).toString();
+    return sasToken
   }
 
   /**
-   * @description                                                    - Retrieves a blob or container URL
-   * @param  { string } container                                    - Container name
-   * @param  { string } blob                                         - Blob to be fetched
-   * @param  { string } SASToken                                     - Shared Access Signature token
-   * @return { string }                                              - Formatted URL string
-   */
+    * @description                                                    - Retrieves a blob or container URL
+    * @param  { string } container                                    - Container name
+    * @param  { string } blob                                         - Blob to be fetched
+    * @param  { string } SASToken                                     - Shared Access Signature token
+    * @return { string }                                              - Formatted URL string
+    */
   getUrl(container, blob, SASToken) {
-    return this.blobService.getUrl(container, blob, SASToken)
+    const blobClient = this.blobService.getContainerClient(container).getBlobClient(blob);
+    return `${blobClient.url}?${SASToken}`;
   }
 
   fileReadStream(container = undefined, fileToGet = undefined) {
-    return (req, res, next) => {
+    return async (req, res, next) => {
       let container = this.reportsContainer;
       let fileToGet = req.params.slug.replace('__', '\/') + '/' + req.params.filename;
       logger.info({ msg: 'Azure__StorageService - fileReadStream called for container ' + container + ' for file ' + fileToGet });
       if (fileToGet.includes('.json')) {
-        const readStream = this.blobService.createReadStream(container, fileToGet);
-        readStream.pipe(res);
-        readStream.on('end', () => {
-          res.end();
-        })
-        readStream.on('error', error => {
+        const blobClient = this.blobService.getContainerClient(container).getBlobClient(fileToGet);
+        try {
+          const downloadResponse = await blobClient.download(0);
+          downloadResponse.readableStreamBody.pipe(res);
+          downloadResponse.readableStreamBody.on("end", () => {
+            res.end();
+          });
+        } catch (error) {
           if (error && error.statusCode === 404) {
             logger.error({ msg: 'Azure__StorageService : readStream error - Error with status code 404', error: error });
             const response = {
@@ -97,7 +123,7 @@ export class AzureStorageService extends BaseStorageService {
             }
             res.status(500).send(this.apiResponse(response));
           }
-        })
+        }
       } else {
         let startDate = new Date();
         let expiryDate = new Date(startDate);
@@ -105,9 +131,9 @@ export class AzureStorageService extends BaseStorageService {
         startDate.setMinutes(startDate.getMinutes() - 3600);
         let sharedAccessPolicy = {
           AccessPolicy: {
-            Permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
-            Start: startDate,
-            Expiry: expiryDate
+            permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
+            startsOn: startDate,
+            expiresOn: expiryDate
           }
         };
         this.fileExists(container, fileToGet, (err, resp) => {
@@ -149,21 +175,19 @@ export class AzureStorageService extends BaseStorageService {
 
   async getBlobProperties(request, callback) {
     logger.info({ msg: 'Azure__StorageService - getBlobProperties called for container ' + request.container + ' for file ' + request.file });
-    this.blobService.getBlobProperties(request.container, request.file, function (err, result, response) {
-      if (err) {
-        logger.error({ msg: 'Azure__StorageService : readStream error - Error with status code 404' });
-        callback({ msg: err.message, statusCode: err.statusCode, filename: request.file, reportname: request.reportname });
+    const blobClient = this.blobService.getContainerClient(request.container).getBlobClient(request.file);
+    try {
+      const blobProperties = await blobClient.getProperties()
+      if (blobProperties) {
+        blobProperties.reportname = request.reportname;
+        blobProperties.filename = request.file;
+        blobProperties.statusCode = 200;
+        callback(null, blobProperties);
       }
-      else if (!response.isSuccessful) {
-        console.error("Blob %s wasn't found container %s", file, request.container)
-        callback({ msg: err.message, statusCode: err.statusCode, filename: request.file, reportname: request.reportname });
-      }
-      else {
-        result.reportname = request.reportname;
-        result.statusCode = 200;
-        callback(null, result);
-      }
-    });
+    } catch (error) {
+      logger.error({ msg: 'Azure__StorageService : readStream error - Error with status code 404' });
+      callback({ msg: "NotFound", statusCode: error.statusCode, filename: request.file, reportname: request.reportname });
+    }
   }
 
   getFileProperties(container = undefined, fileToGet = undefined) {
@@ -216,21 +240,30 @@ export class AzureStorageService extends BaseStorageService {
     }
   }
 
-  getFileAsText(container = undefined, fileToGet = undefined, callback) {
-    this.blobService.getBlobToText(container, fileToGet, (error, result, response) => {
-      if (error) {
-        logger.error({ msg: 'Azure__StorageService : getFileAsText error => ', error });
-        callback(error);
-      } else if (result) {
-        logger.info({ msg: 'Azure__StorageService : getFileAsText success for container ' + container + ' for file ' + fileToGet });
-        callback(null, result);
-      } else if (response) {
-        callback(null, null, response)
-        logger.info({
-          msg: 'Azure__StorageService : getFileAsText success response for container ' +
-            container + ' for file ' + fileToGet + ' response ' + response
-        });
-      }
+  async getFileAsText(container = undefined, fileToGet = undefined, callback) {
+    const blobClient = this.blobService.getContainerClient(container).getBlobClient(fileToGet);
+    try {
+      const downloadResponse = await blobClient.download(0);
+      const blobText = await this.streamToString(downloadResponse.readableStreamBody);
+      logger.info({ msg: 'Azure__StorageService : getFileAsText success for container ' + container + ' for file ' + fileToGet });
+      callback(null, blobText);
+    } catch (error) {
+      logger.error({ msg: 'Azure__StorageService : getFileAsText error => ', error });
+      callback(error);
+    }
+  }
+
+  streamToString(readableStream) {
+    const decoder = new TextDecoder("utf-8");
+    return new Promise((resolve, reject) => {
+      let text = "";
+      readableStream.on("data", (data) => {
+        text += decoder.decode(data, { final: false });
+      });
+      readableStream.on("end", () => {
+        resolve(text);
+      });
+      readableStream.on("error", reject);
     });
   }
 
@@ -248,7 +281,25 @@ export class AzureStorageService extends BaseStorageService {
                 uploadContainer + ' to folder ' + blobFolderName +
                 ' for file name ' + name + ' with size ' + size
             });
-            this.blobService.createBlockBlobFromStream(uploadContainer, `${blobFolderName}/${name}`, part, size, (error) => {
+            const blockBlobClient = this.blobService.getContainerClient(uploadContainer).getBlockBlobClient(`${blobFolderName}/${name}`);
+            blockBlobClient.uploadStream(part, size, 5, {
+              onProgress: (ev) => {
+                console.log(ev.loadedBytes + " of " + ev.totalBytes + " bytes");
+              },
+            }).then((response) => {
+               response = {
+                responseCode: "OK",
+                params: {
+                  err: null,
+                  status: "success",
+                  errmsg: null
+                },
+                result: {
+                  'message': 'Successfully uploaded to blob'
+                }
+              }
+              return res.status(200).send(this.apiResponse(response, 'api.desktop.upload.crash.log'));
+            }).catch((error) => {
               if (error && error.statusCode === 403) {
                 const response = {
                   responseCode: "FORBIDDEN",
@@ -279,19 +330,6 @@ export class AzureStorageService extends BaseStorageService {
                   error: error
                 });
                 return res.status(500).send(this.apiResponse(response, 'api.desktop.upload.crash.log'));
-              } else {
-                const response = {
-                  responseCode: "OK",
-                  params: {
-                    err: null,
-                    status: "success",
-                    errmsg: null
-                  },
-                  result: {
-                    'message': 'Successfully uploaded to blob'
-                  }
-                }
-                return res.status(200).send(this.apiResponse(response, 'api.desktop.upload.crash.log'));
               }
             });
           }
@@ -333,22 +371,8 @@ export class AzureStorageService extends BaseStorageService {
     }
   }
 
-  upload(container, fileName, filePath, options = {}, callback) {
-    this.blobService.createBlockBlobFromLocalFile(container, fileName, filePath, options, (error, result, response) => {
-      if (error) {
-        logger.error({ msg: 'Azure__StorageService : upload error => ', error });
-        callback(error);
-      } else if (result) {
-        logger.info({ msg: 'Azure__StorageService : upload success for container ' + container + ' for file ' + fileName });
-        callback(null, result);
-      } else if (response) {
-        callback(null, null, response)
-        logger.info({
-          msg: 'Azure__StorageService : upload success response for container ' +
-            container + ' for file ' + filename + ' response ' + response
-        });
-      }
-    });
+  upload(container, fileName, filePath, callback) {
+    throw new Error('AzureStorageService :: upload() must be implemented');
   }
 
   getSignedUrl(container, filePath, expiresIn = 3600) {
@@ -358,9 +382,9 @@ export class AzureStorageService extends BaseStorageService {
     startDate.setMinutes(startDate.getMinutes() - expiresIn);
     let sharedAccessPolicy = {
       AccessPolicy: {
-        Permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
-        Start: startDate,
-        Expiry: expiryDate
+        permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
+        startsOn: startDate,
+        expiresOn: expiryDate
       }
     };
     let azureHeaders = {};
