@@ -9,15 +9,14 @@
  * @see {@link https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/storage/storage-blob/MigrationGuide.md#uploading-a-blob-to-the-container | Azure Migration Guide}
  */
 
-const BaseStorageService = require('./BaseStorageService');
-const azure = require('azure-storage');
-const { logger } = require('@project-sunbird/logger');
-const async = require('async');
-const _ = require('lodash');
-const dateFormat = require('dateformat');
-const uuidv1 = require('uuid/v1');
-const multiparty = require('multiparty');
-const { TextDecoder } = require("util");
+const BaseStorageService  = require('./BaseStorageService');
+const { logger }          = require('@project-sunbird/logger');
+const async               = require('async');
+const _                   = require('lodash');
+const dateFormat          = require('dateformat');
+const uuidv1              = require('uuid/v1');
+const multiparty          = require('multiparty');
+const { TextDecoder }     = require("util");
 const { BlobServiceClient, StorageSharedKeyCredential, generateBlobSASQueryParameters } = require("@azure/storage-blob");
 
 export class AzureStorageService extends BaseStorageService {
@@ -51,6 +50,7 @@ export class AzureStorageService extends BaseStorageService {
       callback(error);
     }
   }
+
   /**
    * @description                                                     - Retrieves a shared access signature token
    * @param  { string } container                                     - Container name
@@ -168,7 +168,6 @@ export class AzureStorageService extends BaseStorageService {
             res.status(200).send(this.apiResponse(response));
           }
         })
-
       }
     }
   }
@@ -244,27 +243,21 @@ export class AzureStorageService extends BaseStorageService {
     const blobClient = this.blobService.getContainerClient(container).getBlobClient(fileToGet);
     try {
       const downloadResponse = await blobClient.download(0);
-      const blobText = await this.streamToString(downloadResponse.readableStreamBody);
+      const textDecoder = new TextDecoder("utf-8");
+      const content = [];
+      for await (const chunk of downloadResponse.readableStreamBody) {
+        content.push(textDecoder.decode(chunk));
+      }
+      const text = content.join("");
       logger.info({ msg: 'Azure__StorageService : getFileAsText success for container ' + container + ' for file ' + fileToGet });
-      callback(null, blobText);
+      callback(null, text);
     } catch (error) {
       logger.error({ msg: 'Azure__StorageService : getFileAsText error => ', error });
-      callback(error);
+      delete error.request;
+      delete error.response
+      delete error.details
+      callback(error)
     }
-  }
-
-  streamToString(readableStream) {
-    const decoder = new TextDecoder("utf-8");
-    return new Promise((resolve, reject) => {
-      let text = "";
-      readableStream.on("data", (data) => {
-        text += decoder.decode(data, { final: false });
-      });
-      readableStream.on("end", () => {
-        resolve(text);
-      });
-      readableStream.on("error", reject);
-    });
   }
 
   blockStreamUpload(uploadContainer = undefined) {
@@ -287,7 +280,7 @@ export class AzureStorageService extends BaseStorageService {
                 console.log(ev.loadedBytes + " of " + ev.totalBytes + " bytes");
               },
             }).then((response) => {
-               response = {
+              response = {
                 responseCode: "OK",
                 params: {
                   err: null,
@@ -375,14 +368,14 @@ export class AzureStorageService extends BaseStorageService {
     throw new Error('AzureStorageService :: upload() must be implemented');
   }
 
-  getSignedUrl(container, filePath, expiresIn = 3600) {
+  getSignedUrl(container, filePath, expiresIn = 3600, permission = '') {
     let startDate = new Date();
     let expiryDate = new Date(startDate);
     expiryDate.setMinutes(startDate.getMinutes() + expiresIn);
     startDate.setMinutes(startDate.getMinutes() - expiresIn);
     let sharedAccessPolicy = {
       AccessPolicy: {
-        permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
+        permissions: (permission !== '') ? azure.BlobUtilities.SharedAccessPermissions[permission] : azure.BlobUtilities.SharedAccessPermissions.READ,
         startsOn: startDate,
         expiresOn: expiryDate
       }
