@@ -111,9 +111,8 @@ class BaseStorageService {
    * @param {string} container       - Container name or folder name in storage service
    * @param {string} filePath        - File path for file to get signed url
    * @param {string} expiresIn       - signed url expires time in seconds, defult value is 3600
-   * @param {string} permission      - signed url permission
    */
-  getSignedUrl(container, filePath, expiresIn = 3600, permission = '') {
+  getSignedUrl(container, filePath, expiresIn = 3600) {
     throw new Error('BaseStorageService :: getSignedUrl() must be implemented');
   }
 
