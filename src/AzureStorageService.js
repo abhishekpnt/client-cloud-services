@@ -27,11 +27,15 @@ export class AzureStorageService extends BaseStorageService {
       throw new Error('Azure__StorageService :: Required configuration is missing');
     }
     this.reportsContainer = _.get(config, 'reportsContainer')?.toString();
-    this.sharedKeyCredential = new StorageSharedKeyCredential(config?.identity, config?.credential);
-    this.blobService = new BlobServiceClient(
-      `https://${config?.identity}.blob.core.windows.net`,
-      this.sharedKeyCredential
-    );
+    try {
+      this.sharedKeyCredential = new StorageSharedKeyCredential(config?.identity, config?.credential);
+      this.blobService = new BlobServiceClient(
+        `https://${config?.identity}.blob.core.windows.net`,
+        this.sharedKeyCredential
+      );
+    } catch (error) {
+      logger.info({ msg: 'Azure__StorageService - Unable to create Azure client' });
+    }
   }
 
   async fileExists(container, fileToGet, callback) {
@@ -94,7 +98,7 @@ export class AzureStorageService extends BaseStorageService {
         try {
           const downloadResponse = await blobClient.download(0);
           downloadResponse.readableStreamBody.pipe(res);
-          downloadResponse.readableStreamBody.on("end", () => {
+          downloadResponse.readableStreamBody.on('end', () => {
             res.end();
           });
         } catch (error) {
@@ -185,7 +189,7 @@ export class AzureStorageService extends BaseStorageService {
       }
     } catch (error) {
       logger.error({ msg: 'Azure__StorageService : readStream error - Error with status code 404' });
-      callback({ msg: "NotFound", statusCode: error.statusCode, filename: request.file, reportname: request.reportname });
+      callback({ msg: 'NotFound', statusCode: error.statusCode, filename: request.file, reportname: request.reportname });
     }
   }
 
@@ -243,7 +247,7 @@ export class AzureStorageService extends BaseStorageService {
     const blobClient = this.blobService.getContainerClient(container).getBlobClient(fileToGet);
     try {
       const downloadResponse = await blobClient.download(0);
-      const textDecoder = new TextDecoder("utf-8");
+      const textDecoder = new TextDecoder('utf-8');
       const content = [];
       for await (const chunk of downloadResponse.readableStreamBody) {
         content.push(textDecoder.decode(chunk));
