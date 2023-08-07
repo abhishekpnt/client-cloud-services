@@ -365,5 +365,9 @@ export class OCIStorageService extends BaseStorageService {
     const presignedURL = await getSignedUrl(this.client, command, { expiresIn: expiresIn });
     return Promise.resolve(presignedURL);
   }
+
+  getDownloadableUrl(container, filePath, expiresIn = 3600) {
+    throw new Error('BaseStorageService :: getDownloadableUrl() must be implemented');
+  }
   
 }
