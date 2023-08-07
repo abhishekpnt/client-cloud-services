@@ -18,6 +18,7 @@ const uuidv1              = require('uuid/v1');
 const multiparty          = require('multiparty');
 const { TextDecoder }     = require("util");
 const { BlobServiceClient, StorageSharedKeyCredential, generateBlobSASQueryParameters } = require("@azure/storage-blob");
+const READ='r'
 
 export class AzureStorageService extends BaseStorageService {
 
@@ -133,9 +134,9 @@ export class AzureStorageService extends BaseStorageService {
         let expiryDate = new Date(startDate);
         expiryDate.setMinutes(startDate.getMinutes() + 3600);
         startDate.setMinutes(startDate.getMinutes() - 3600);
-        let sharedAccessPolicy = {
+       let sharedAccessPolicy = {
           AccessPolicy: {
-            permissions: 'r',
+            permissions: READ,
             startsOn: startDate,
             expiresOn: expiryDate
           }
@@ -379,7 +380,7 @@ export class AzureStorageService extends BaseStorageService {
     startDate.setMinutes(startDate.getMinutes() - expiresIn);
     let sharedAccessPolicy = {
       AccessPolicy: {
-        permissions: (permission !== '') ? permission : 'r',
+        permissions: (permission !== '') ? permission : READ,
         startsOn: startDate,
         expiresOn: expiryDate
       }
