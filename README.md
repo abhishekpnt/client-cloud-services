@@ -40,15 +40,15 @@ $ npm install --save client-cloud-services
 const cloudService  = require('client-cloud-services');
 
 const config = {
+  provider: CLOUD_PROVIDER,
   identity: CLOUD_IDENTITY,
   credential: CLOUD_IDENTITY_KEY,
   labelContainer: LABEL_CONTAINER_NAME
 };
 
-let client = cloudService.init(CLOUD_PROVIDER);
-let storage = new client(config);
+let client = cloudService.init(config);
 
-storage.SERVICE_NAME()...
+client.SERVICE_NAME()...
 
 ```
 

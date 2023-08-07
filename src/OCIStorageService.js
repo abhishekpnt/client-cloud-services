@@ -357,7 +357,7 @@ export class OCIStorageService extends BaseStorageService {
     }
   }
   upload(container, fileName, filePath, callback) {
-    throw new Error('BaseStorageService :: upload() must be implemented');
+    throw new Error('OCIStorageService :: upload() must be implemented');
   }
 
   async getSignedUrl(container, filePath, expiresIn = 3600) {
