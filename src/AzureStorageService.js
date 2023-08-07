@@ -135,7 +135,7 @@ export class AzureStorageService extends BaseStorageService {
         startDate.setMinutes(startDate.getMinutes() - 3600);
         let sharedAccessPolicy = {
           AccessPolicy: {
-            permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
+            permissions: 'r',
             startsOn: startDate,
             expiresOn: expiryDate
           }
@@ -379,7 +379,7 @@ export class AzureStorageService extends BaseStorageService {
     startDate.setMinutes(startDate.getMinutes() - expiresIn);
     let sharedAccessPolicy = {
       AccessPolicy: {
-        permissions: (permission !== '') ? azure.BlobUtilities.SharedAccessPermissions[permission] : azure.BlobUtilities.SharedAccessPermissions.READ,
+        permissions: (permission !== '') ? permission : 'r',
         startsOn: startDate,
         expiresOn: expiryDate
       }
