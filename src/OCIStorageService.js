@@ -17,9 +17,10 @@ const uuidv1              = require('uuid/v1');
 const async               = require('async');
 const storageLogger       = require('./storageLogger');
 const { getSignedUrl }    = require("@aws-sdk/s3-request-presigner");
-const { S3Client, GetObjectCommand, HeadObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, GetObjectCommand, HeadObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { Upload }          = require("@aws-sdk/lib-storage");
 const multiparty          = require('multiparty');
+const WRITE = 'w'
 export class OCIStorageService extends BaseStorageService {
 
   constructor(config) {
@@ -30,6 +31,7 @@ export class OCIStorageService extends BaseStorageService {
 
     const region = _.get(config, 'region').toString();
     const endpoint = _.get(config, 'endpoint').toString();
+    this.ociEndpoint = endpoint;
     this.client = new S3Client({
       credentials: {
         accessKeyId: _.get(config, 'identity'),
@@ -47,10 +49,15 @@ export class OCIStorageService extends BaseStorageService {
    * @param  {string} bucketName      - OCI bucket name
    * @param  {string} fileToGet       - OCI File to fetch
    * @param  {string} prefix          - `Optional` - Prefix for file path
+   * @param  {string} permission          - `Optional` - operation permission
    * @returns                         - OCI Command to be executed by SDK
    */
-  getOCICommand(bucketName, fileToGet, prefix = '') {
-    return new GetObjectCommand({ Bucket: bucketName, Key: prefix + fileToGet });
+  getOCICommand(bucketName, fileToGet, prefix = '', permission = '') {
+    if ( permission === WRITE ) {
+      return new PutObjectCommand({ Bucket: bucketName, Key: prefix + fileToGet });
+    } else {
+      return new GetObjectCommand({ Bucket: bucketName, Key: prefix + fileToGet });
+    }
   }
 
   /**
@@ -357,17 +364,28 @@ export class OCIStorageService extends BaseStorageService {
     }
   }
   upload(container, fileName, filePath, callback) {
-    throw new Error('OCIStorageService :: upload() must be implemented');
+    throw new Error('BaseStorageService :: upload() must be implemented');
   }
 
-  async getSignedUrl(container, filePath, expiresIn = 3600) {
-    const command = this.getOCICommand(container, filePath, undefined);
-    const presignedURL = await getSignedUrl(this.client, command, { expiresIn: expiresIn });
+  async getSignedUrl(container, filePath, expiresIn = 3600, permission = '') {
+    // Prepare options for generating the signed URL
+    let presignedUrlOptions = { expiresIn: expiresIn }
+    if ( permission === WRITE ) {
+      presignedUrlOptions.operation = "putObject";
+    }
+
+    // Create an OCI command for the operation
+    const command = this.getOCICommand(container, filePath, undefined, permission);
+    
+    // Generate the signed URL using the OCI client and provided options
+    const presignedURL = await getSignedUrl(this.client, command, presignedUrlOptions);
     return Promise.resolve(presignedURL);
   }
 
-  getDownloadableUrl(container, filePath, expiresIn = 3600) {
-    throw new Error('BaseStorageService :: getDownloadableUrl() must be implemented');
+  getDownloadableUrl(container, filePath) {
+    // Construct the downloadable URL using the OCI endpoint, container, and file path
+    const downloadableURL = `${this.ociEndpoint}/${container}/${filePath}`;
+    return Promise.resolve(downloadableURL);  
   }
   
 }
