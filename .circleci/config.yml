@@ -14,16 +14,16 @@ jobs:
           command: node -v
       - run:
           name: Build app
-          command: npm run build:prod
-      # - run:
-      #     name: Publish to NPM
-      #     command: |
-      #       if [ -z $CIRCLE_PR_NUMBER ]; then
-      #         echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
-      #         npm publish
-      #       else
-      #         echo "skipping npm publish"
-      #       fi
+          command: npm run build
+      - run:
+          name: Publish to NPM
+          command: |
+            if [ -z $CIRCLE_PR_NUMBER ]; then
+              echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+              npm publish
+            else
+              echo "skipping npm publish"
+            fi
 
 workflows:
     version: 2
