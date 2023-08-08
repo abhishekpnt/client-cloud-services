@@ -1,5 +1,5 @@
 ### 3.0.0
-- CSP Generalization changes and using '@azure/storage-blob' package inplace of 'azure-storage' in AzureStorage service
+- CSP Generalization changes and upgradation of 'azure-storage' to '@azure/storage-blob' in AzureStorage service
 ### 2.0.5
 - Added additional loggers for GCP getFileAsText
 ### 2.0.0
