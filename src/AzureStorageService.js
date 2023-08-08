@@ -373,6 +373,14 @@ export class AzureStorageService extends BaseStorageService {
     throw new Error('AzureStorageService :: upload() must be implemented');
   }
 
+  /**
+   * @description                   - Generates a pre-signed URL for a specific operation on a file in Azure storage.
+   * @param {string} container      - Azure container or bucket name.
+   * @param {string} filePath       - Path to the file within the container.
+   * @param {number} expiresIn      - Optional. Number of seconds before the pre-signed URL expires.
+   * @param {string} permission     - Optional. The permission for the operation (e.g., READ, WRITE).
+   * @returns {Promise<string>}     - A promise that resolves to the pre-signed URL.
+   */
   getSignedUrl(container, filePath, expiresIn = 3600, permission = '') {
     let startDate = new Date();
     let expiryDate = new Date(startDate);
@@ -391,7 +399,13 @@ export class AzureStorageService extends BaseStorageService {
     return Promise.resolve(sasUrl);
   }
 
-  // Introducing the getDownloadableUrl method to facilitate its implementation across various client services
+  /**
+   * @description                     - Generates a pre-signed URL for downloading a file from the Azure storage.
+   * @param {string} container        - Azure container or bucket name.
+   * @param {string} filePath         - Path to the file within the container.
+   * @param {number} expiresIn        - Optional. Number of seconds before the pre-signed URL expires.
+   * @returns {Promise<string>}       - A promise that resolves to the downloadable URL.
+   */
   getDownloadableUrl(container, filePath, expiresIn = 3600) {
     let startDate = new Date();
     let expiryDate = new Date(startDate);

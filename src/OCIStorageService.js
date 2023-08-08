@@ -49,7 +49,7 @@ export class OCIStorageService extends BaseStorageService {
    * @param  {string} bucketName      - OCI bucket name
    * @param  {string} fileToGet       - OCI File to fetch
    * @param  {string} prefix          - `Optional` - Prefix for file path
-   * @param  {string} permission          - `Optional` - operation permission
+   * @param  {string} permission      - `Optional` - operation permission
    * @returns                         - OCI Command to be executed by SDK
    */
   getOCICommand(bucketName, fileToGet, prefix = '', permission = '') {
@@ -364,26 +364,34 @@ export class OCIStorageService extends BaseStorageService {
     }
   }
   upload(container, fileName, filePath, callback) {
-    throw new Error('BaseStorageService :: upload() must be implemented');
+    throw new Error('OCIStorageService :: upload() must be implemented');
   }
 
+  /**
+   * @description                     - Generates a signed URL for performing specified operations on a file in the OCI bucket.
+   * @param {string} container        - OCI bucket name.
+   * @param {string} filePath         - Path to the file in the bucket.
+   * @param {number} expiresIn        - Expiry time for the signed URL in seconds. Default is 3600.
+   * @param {string} permission       - Permission for the operation. Use WRITE for PUT operations.
+   * @returns {Promise<string>}       - A signed URL for the specified operation on the file.
+   */
   async getSignedUrl(container, filePath, expiresIn = 3600, permission = '') {
-    // Prepare options for generating the signed URL
     let presignedUrlOptions = { expiresIn: expiresIn }
     if ( permission === WRITE ) {
       presignedUrlOptions.operation = "putObject";
     }
-
-    // Create an OCI command for the operation
     const command = this.getOCICommand(container, filePath, undefined, permission);
-    
-    // Generate the signed URL using the OCI client and provided options
     const presignedURL = await getSignedUrl(this.client, command, presignedUrlOptions);
     return Promise.resolve(presignedURL);
   }
-
+  
+  /**
+   * @description                     - Generates a downloadable URL for a file in the OCI bucket.
+   * @param {string} container        - OCI bucket name.
+   * @param {string} filePath         - Path to the file in the bucket.
+   * @returns {Promise<string>}       - A downloadable URL for the specified file.
+   */
   getDownloadableUrl(container, filePath) {
-    // Construct the downloadable URL using the OCI endpoint, container, and file path
     const downloadableURL = `${this.ociEndpoint}/${container}/${filePath}`;
     return Promise.resolve(downloadableURL);  
   }
