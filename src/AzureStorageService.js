@@ -390,12 +390,11 @@ export class AzureStorageService extends BaseStorageService {
     let sasUrl = this.getUrl(container, filePath, token);
     return Promise.resolve(sasUrl);
   }
-  
+
   // Introducing the getDownloadableUrl method to facilitate its implementation across various client services
   getDownloadableUrl(container, filePath, expiresIn = 3600) {
     let startDate = new Date();
     let expiryDate = new Date(startDate);
-    let READ = 'r'
     expiryDate.setMinutes(startDate.getMinutes() + expiresIn);
     let sharedAccessPolicy = {
       AccessPolicy: {
