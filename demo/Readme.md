@@ -1,0 +1,60 @@
+# Client-cloud-services-demo
+
+### Usage
+
+1. In `env.js` file provide the required configuration for respective Cloud Provider
+
+| Generalized keys |             Azure            |             AWS            |              GCP              |              OCI              | 
+|:----------------:|:----------------------------:|:--------------------------:|:-----------------------------:|:-----------------------------:|
+|     provider     |            `azure`           |            `aws`           |            `gcloud`           |            `oci`              |
+|     identity     |      Azure Account Name      |       AWS Access Key       |        GCP Client Email       |        OCI S3 Access Key      |
+|    credential    |       Azure Account Key      |       AWS Secret Key       |        GCP Private Key        |        OCI S3 Secret Key      |
+|      region      |              --              |         AWS Region         |               --              |              OCI Region       |
+|     projectId    |              --              |             --             |         GCP Project ID        |                --             |
+|     endpoint     |              --              |             --             |               --              |        OCI S3 endpoint        |
+|   containerName  |              --              |       AWS Bucket Name      |        GCP Bucket Name        |        OCI Bucket Name        |
+| reportsContainer | Azure Reports Container Name | AWS Reports Container Name | GCloud Reports Container Name |   OCI Reports Container Name  |
+|  labelsContainer |  Azure Labels Container Name |  AWS Labels Container Name |  GCloud Labels Container Name |   OCI Labels Container Name   |
+
+---
+### Client-cloud-services provides the following methods out of the box
+1. `fileReadStream` - To read the file in case of JSON file and to get downloadable signedURL of the file in case of other type of files
+
+```
+curl --location 'http://localhost:3030/fileread/<folder>/<blob>'
+```
+where
+- folder: folder in which blob exist
+- blob : file name
+
+---
+
+2. `getFileProperties` - To get the properties of the file 
+```
+curl --location --globoff 'http://localhost:3030/metadata?fileNames={"file":"<folder>/<blob>"}'
+```
+where
+- folder: folder in which blob exist
+- blob : file name
+---
+
+3. `getFileAsText` - To get the file as a text stream
+```
+curl --location 'http://localhost:3030/getfileastext/<lang>/<blob>'
+```
+where
+- lang: language
+- blob : file name
+---
+
+4. `blockStreamUpload` - To upload the multipart form data to cloud
+
+```
+curl --location 'http://localhost:3030/upload?deviceId=<id> \
+--form '=@"<filepath>"'
+```
+where
+- id: Device Id
+- filepath : Path of file to be uploaded
+---
+
