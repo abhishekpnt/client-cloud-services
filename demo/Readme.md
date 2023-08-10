@@ -1,6 +1,6 @@
 # Client-cloud-services-demo
 
-### Usage
+### Setup
 
 1. In `env.js` file provide the required configuration for respective Cloud Provider
 
@@ -17,7 +17,25 @@
 |  labelsContainer |  Azure Labels Container Name |  AWS Labels Container Name |  GCloud Labels Container Name |   OCI Labels Container Name   |
 
 ---
+
+### Usage
+1. In demo directory run the following command in terminal
+    ```
+    yarn install
+    ```
+    This will install the required dependencies
+
+2. Next run
+    ```
+    node index.js
+    ```
+    This will start the server
+
+2. Run Curl commands provided below in Postman to get the response
+
+---
 ### Client-cloud-services provides the following methods out of the box
+#### Use respective curl commands for each method
 1. `fileReadStream` - To read the file in case of JSON file and to get downloadable signedURL of the file in case of other type of files
 
 ```
