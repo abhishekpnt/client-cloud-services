@@ -10,7 +10,7 @@ console.log("Cloud Client Initialised for The Provider:", cloudConfig.provider)
 
 const getGeneralisedResourcesBundles = (req, res) => {
   let container, blobName = req.params.fileName;
-  container = cloudConfig.labelsContainer;
+  container = cloudConfig.publicObjectStorage;
   cloudClient.getFileAsText(container, blobName, function (error, result, response) {
     if (error && error.statusCode === 404) {
       console.error({ msg: "Blob %s wasn't found container %s", blobName, container })
@@ -62,10 +62,10 @@ app.post('/upload',
 );
 
 app.get('/fileread/:slug/:filename',
-  cloudClient.fileReadStream(cloudConfig.reportsContainer));
+  cloudClient.fileReadStream(cloudConfig.privateObjectStorage));
 
 app.get('/metadata',
-  cloudClient.getFileProperties(cloudConfig.reportsContainer)
+  cloudClient.getFileProperties(cloudConfig.privateObjectStorage)
 );
 
 app.get('/getfileastext/:lang/:fileName',

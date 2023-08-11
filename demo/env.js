@@ -2,8 +2,8 @@ let cloudConfig = {
     provider: '',
     identity: '',
     credential: '',
-    reportsContainer: '',
-    labelsContainer: '',
+    privateObjectStorage: '',
+    publicObjectStorage: '',
     region: '',
     projectId: '',
     endpoint: ''
