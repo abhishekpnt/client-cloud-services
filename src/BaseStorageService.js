@@ -116,6 +116,17 @@ class BaseStorageService {
     throw new Error('BaseStorageService :: getSignedUrl() must be implemented');
   }
 
+  /**
+   * @description                    - get downloadable url for file
+   * @throws                         - Throws Exception if method is not invoked without declaration
+   * @param {string} container       - Container name or folder name in storage service
+   * @param {string} filePath        - File path for file to get downloadable url
+   * @param {string} expiresIn       - downloadable url expires time in seconds, defult value is 3600
+   */
+  getDownloadableUrl(container, filePath, expiresIn = 3600) {
+    throw new Error('BaseStorageService :: getDownloadableUrl() must be implemented');
+  }
+
 }
 
 module.exports = BaseStorageService;
