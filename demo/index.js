@@ -10,10 +10,10 @@ console.log("Cloud Client Initialised for The Provider:", cloudConfig.provider)
 
 const getGeneralisedResourcesBundles = (req, res) => {
   let container, blobName = req.params.fileName;
-  container = cloudClient.labelsContainer;
+  container = cloudConfig.labelsContainer;
   cloudClient.getFileAsText(container, blobName, function (error, result, response) {
     if (error && error.statusCode === 404) {
-      logger.error({ msg: "Blob %s wasn't found container %s", blobName, container })
+      console.error({ msg: "Blob %s wasn't found container %s", blobName, container })
       const response = {
         responseCode: "CLIENT_ERROR",
         params: {
